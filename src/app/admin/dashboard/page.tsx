@@ -746,8 +746,11 @@ export default function AdminDashboard() {
                       <h3 className="text-lg font-semibold text-slate-900">Organization Settings</h3>
                     </div>
                     <button
-                      onClick={() => setEditingSettings(settings || {})}
-                      className="bg-emerald-600 text-white px-4 py-2 rounded-lg hover:bg-emerald-700 flex items-center gap-2"
+                      onClick={() => settings && setEditingSettings(settings)}
+                      disabled={!settings}
+                      className={`bg-emerald-600 text-white px-4 py-2 rounded-lg hover:bg-emerald-700 flex items-center gap-2 ${
+                        !settings ? "opacity-50 cursor-not-allowed hover:bg-emerald-600" : ""
+                      }`}
                     >
                       <Edit className="w-4 h-4" />
                       Edit Settings
