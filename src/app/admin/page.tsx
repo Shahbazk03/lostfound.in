@@ -4,1182 +4,32 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import {
-  Loader2,
-  AlertCircle,
+  Shield,
   Users,
   Package,
-  CreditCard,
+  DollarSign,
+  Loader2,
+  AlertCircle,
+  CheckCircle,
+  XCircle,
+  Eye,
+  MapPin,
+  UserCheck,
+  BarChart3,
   MessageSquare,
   Settings,
-  BarChart3,
   Plus,
   Edit,
   Trash2,
-  X,
   Save,
-  LogOut,
-  Building2,
+  X,
+  Building,
   Mail,
   Phone,
 } from "lucide-react";
+import { formatDate, formatCurrency } from "@/lib/utils";
 
-interface DashboardStats {
-  totalUsers: number;
-  totalItems: number;
-  totalPayments: number;
-  totalMessages: number;
-  revenueTotal: number;
-}
-
-interface User {
-  id: number;
-  email: string;
-  name: string;
-  phone?: string;
-  role: string;
-  verified: boolean;
-  createdAt: string;
-}
-
-interface Item {
-  id: number;
-  userId: number;
-  title: string;
-  type: string;
-  category: string;
-  status: string;
-  city: string;
-  createdAt: string;
-}
-
-interface Payment {
-  id: number;
-  userId: number;
-  itemId: number;
-  amount: number;
-  status: string;
-  createdAt: string;
-}
-
-interface OrganizationSettings {
-  id: number;
-  organizationName: string;
-  description?: string;
-  contactEmail: string;
-  contactPhone?: string;
-  address?: string;
-  city?: string;
-  country?: string;
-  supportEmail?: string;
-  supportPhone?: string;
-  timezone: string;
-  currency: string;
-}
-
-export default function AdminPage() {
-  const { user } = useAuth();
-  const router = useRouter();
-  const [activeTab, setActiveTab] = useState("dashboard");
-  const [stats, setStats] = useState<DashboardStats | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [users, setUsers] = useState<User[]>([]);
-  const [items, setItems] = useState<Item[]>([]);
-  const [payments, setPayments] = useState<Payment[]>([]);
-  const [orgSettings, setOrgSettings] = useState<OrganizationSettings | null>(null);
-  const [editingUser, setEditingUser] = useState<User | null>(null);
-  const [editingItem, setEditingItem] = useState<Item | null>(null);
-  const [showUserForm, setShowUserForm] = useState(false);
-  const [showItemForm, setShowItemForm] = useState(false);
-  const [formData, setFormData] = useState<any>({});
-  const [itemFormData, setItemFormData] = useState<any>({});
-  const [orgFormData, setOrgFormData] = useState<any>({});
-  const [saving, setSaving] = useState(false);
-
-  useEffect(() => {
-    if (!user) return;
-    if (user.role !== "admin") {
-      router.push("/");
-      return;
-    }
-    loadDashboard();
-  }, [user, router]);
-
-  const loadDashboard = async () => {
-    try {
-      const res = await fetch("/api/admin/stats");
-      if (res.ok) {
-        const data = await res.json();
-        setStats(data);
-      }
-    } catch (error) {
-      console.error("Error loading stats:", error);
-    }
-    setLoading(false);
-  };
-
-  const loadUsers = async () => {
-    try {
-      const res = await fetch("/api/admin/users");
-      if (res.ok) {
-        const data = await res.json();
-        setUsers(data.users || data);
-      }
-    } catch (error) {
-      console.error("Error loading users:", error);
-    }
-  };
-
-  const loadItems = async () => {
-    try {
-      const res = await fetch("/api/admin/items");
-      if (res.ok) {
-        const data = await res.json();
-        setItems(data.items || data);
-      }
-    } catch (error) {
-      console.error("Error loading items:", error);
-    }
-  };
-
-  const loadPayments = async () => {
-    try {
-      const res = await fetch("/api/admin/payments");
-      if (res.ok) {
-        const data = await res.json();
-        setPayments(data.payments || data);
-      }
-    } catch (error) {
-      console.error("Error loading payments:", error);
-    }
-  };
-
-  const loadOrgSettings = async () => {
-    try {
-      const res = await fetch("/api/admin/organization");
-      if (res.ok) {
-        const data = await res.json();
-        setOrgSettings(data);
-        setOrgFormData(data);
-      }
-    } catch (error) {
-      console.error("Error loading org settings:", error);
-    }
-  };
-
-  useEffect(() => {
-    if (activeTab === "users" && users.length === 0) loadUsers();
-    if (activeTab === "items" && items.length === 0) loadItems();
-    if (activeTab === "payments" && payments.length === 0) loadPayments();
-    if (activeTab === "organization" && !orgSettings) loadOrgSettings();
-  }, [activeTab]);
-
-  const handleSaveUser = async () => {
-    setSaving(true);
-    try {
-      const url = editingUser
-        ? `/api/admin/users/${editingUser.id}`
-        : "/api/admin/users";
-      const method = editingUser ? "PUT" : "POST";
-
-      const res = await fetch(url, {
-        method,
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData),
-      });
-
-      if (res.ok) {
-        loadUsers();
-        setShowUserForm(false);
-        setEditingUser(null);
-        setFormData({});
-      }
-    } catch (error) {
-      console.error("Error saving user:", error);
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const handleDeleteUser = async (id: number) => {
-    if (!confirm("Are you sure you want to delete this user?")) return;
-
-    try {
-      const res = await fetch(`/api/admin/users/${id}`, {
-        method: "DELETE",
-      });
-
-      if (res.ok) {
-        loadUsers();
-      }
-    } catch (error) {
-      console.error("Error deleting user:", error);
-    }
-  };
-
-  const handleSaveItem = async () => {
-    setSaving(true);
-    try {
-      const url = editingItem
-        ? `/api/admin/items/${editingItem.id}`
-        : "/api/admin/items";
-      const method = editingItem ? "PUT" : "POST";
-
-      const res = await fetch(url, {
-        method,
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(itemFormData),
-      });
-
-      if (res.ok) {
-        loadItems();
-        setShowItemForm(false);
-        setEditingItem(null);
-        setItemFormData({});
-      }
-    } catch (error) {
-      console.error("Error saving item:", error);
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const handleDeleteItem = async (id: number) => {
-    if (!confirm("Are you sure you want to delete this item?")) return;
-
-    try {
-      const res = await fetch(`/api/admin/items/${id}`, {
-        method: "DELETE",
-      });
-
-      if (res.ok) {
-        loadItems();
-      }
-    } catch (error) {
-      console.error("Error deleting item:", error);
-    }
-  };
-
-  const handleSaveOrgSettings = async () => {
-    setSaving(true);
-    try {
-      const res = await fetch("/api/admin/organization", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(orgFormData),
-      });
-
-      if (res.ok) {
-        loadOrgSettings();
-        alert("Organization settings updated successfully!");
-      }
-    } catch (error) {
-      console.error("Error saving org settings:", error);
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const handleLogout = async () => {
-    await fetch("/api/auth/logout", { method: "POST" });
-    router.push("/login");
-  };
-
-  if (!user || user.role !== "admin") {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50">
-        <div className="text-center">
-          <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
-          <h2 className="text-xl font-semibold text-slate-900 mb-2">
-            Access Denied
-          </h2>
-          <p className="text-slate-600">You do not have admin privileges.</p>
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="min-h-screen bg-slate-50">
-      {/* Admin Header */}
-      <div className="bg-white border-b border-slate-200 sticky top-0 z-40">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-slate-900">Admin Dashboard</h1>
-            <p className="text-sm text-slate-500">Welcome, {user.name}</p>
-          </div>
-          <button
-            onClick={handleLogout}
-            className="flex items-center gap-2 px-4 py-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors"
-          >
-            <LogOut className="w-4 h-4" />
-            Logout
-          </button>
-        </div>
-      </div>
-
-      {/* Navigation Tabs */}
-      <div className="bg-white border-b border-slate-200 sticky top-16 z-30">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex gap-4 overflow-x-auto">
-            {[
-              { id: "dashboard", label: "Dashboard", icon: BarChart3 },
-              { id: "users", label: "Users", icon: Users },
-              { id: "items", label: "Items", icon: Package },
-              { id: "payments", label: "Payments", icon: CreditCard },
-              { id: "messages", label: "Messages", icon: MessageSquare },
-              { id: "organization", label: "Organization", icon: Building2 },
-            ].map(({ id, label, icon: Icon }) => (
-              <button
-                key={id}
-                onClick={() => setActiveTab(id)}
-                className={`flex items-center gap-2 px-4 py-4 border-b-2 transition-colors whitespace-nowrap ${
-                  activeTab === id
-                    ? "border-emerald-600 text-emerald-600 font-semibold"
-                    : "border-transparent text-slate-600 hover:text-slate-900"
-                }`}
-              >
-                <Icon className="w-4 h-4" />
-                {label}
-              </button>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      {/* Content */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Dashboard Tab */}
-        {activeTab === "dashboard" && (
-          <div>
-            {stats ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                {[
-                  {
-                    label: "Total Users",
-                    value: stats.totalUsers,
-                    icon: Users,
-                    color: "bg-blue-100 text-blue-600",
-                  },
-                  {
-                    label: "Total Items",
-                    value: stats.totalItems,
-                    icon: Package,
-                    color: "bg-green-100 text-green-600",
-                  },
-                  {
-                    label: "Total Payments",
-                    value: stats.totalPayments,
-                    icon: CreditCard,
-                    color: "bg-purple-100 text-purple-600",
-                  },
-                  {
-                    label: "Revenue",
-                    value: `$${(stats.revenueTotal / 100).toFixed(2)}`,
-                    icon: BarChart3,
-                    color: "bg-yellow-100 text-yellow-600",
-                  },
-                ].map(({ label, value, icon: Icon, color }) => (
-                  <div
-                    key={label}
-                    className="bg-white rounded-2xl border border-slate-200 p-6"
-                  >
-                    <div className={`w-12 h-12 rounded-lg ${color} flex items-center justify-center mb-4`}>
-                      <Icon className="w-6 h-6" />
-                    </div>
-                    <p className="text-slate-600 text-sm font-medium">{label}</p>
-                    <p className="text-3xl font-bold text-slate-900 mt-1">{value}</p>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="flex items-center justify-center py-20">
-                <Loader2 className="w-8 h-8 text-emerald-600 animate-spin" />
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Users Tab */}
-        {activeTab === "users" && (
-          <div>
-            <div className="flex justify-between items-center mb-6">
-              <h2 className="text-xl font-bold text-slate-900">Users Management</h2>
-              <button
-                onClick={() => {
-                  setShowUserForm(true);
-                  setEditingUser(null);
-                  setFormData({});
-                }}
-                className="flex items-center gap-2 bg-emerald-600 text-white px-4 py-2 rounded-lg hover:bg-emerald-700 transition-colors"
-              >
-                <Plus className="w-4 h-4" />
-                Add User
-              </button>
-            </div>
-
-            {showUserForm && (
-              <div className="bg-white rounded-2xl border border-slate-200 p-6 mb-6">
-                <div className="flex justify-between items-center mb-4">
-                  <h3 className="font-semibold text-lg text-slate-900">
-                    {editingUser ? "Edit User" : "Create New User"}
-                  </h3>
-                  <button
-                    onClick={() => {
-                      setShowUserForm(false);
-                      setEditingUser(null);
-                      setFormData({});
-                    }}
-                    className="text-slate-400 hover:text-slate-600"
-                  >
-                    <X className="w-5 h-5" />
-                  </button>
-                </div>
-
-                <div className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-slate-700 mb-1">
-                        Email
-                      </label>
-                      <input
-                        type="email"
-                        value={formData.email || ""}
-                        onChange={(e) =>
-                          setFormData({ ...formData, email: e.target.value })
-                        }
-                        className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
-                        disabled={!!editingUser}
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-slate-700 mb-1">
-                        Name
-                      </label>
-                      <input
-                        type="text"
-                        value={formData.name || ""}
-                        onChange={(e) =>
-                          setFormData({ ...formData, name: e.target.value })
-                        }
-                        className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-slate-700 mb-1">
-                        Phone
-                      </label>
-                      <input
-                        type="tel"
-                        value={formData.phone || ""}
-                        onChange={(e) =>
-                          setFormData({ ...formData, phone: e.target.value })
-                        }
-                        className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-slate-700 mb-1">
-                        Role
-                      </label>
-                      <select
-                        value={formData.role || "user"}
-                        onChange={(e) =>
-                          setFormData({ ...formData, role: e.target.value })
-                        }
-                        className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
-                      >
-                        <option value="user">User</option>
-                        <option value="admin">Admin</option>
-                      </select>
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="flex items-center gap-2">
-                      <input
-                        type="checkbox"
-                        checked={formData.verified || false}
-                        onChange={(e) =>
-                          setFormData({ ...formData, verified: e.target.checked })
-                        }
-                        className="w-4 h-4 border border-slate-300 rounded"
-                      />
-                      <span className="text-sm font-medium text-slate-700">
-                        Verified
-                      </span>
-                    </label>
-                  </div>
-
-                  <div className="flex gap-3 pt-4">
-                    <button
-                      onClick={handleSaveUser}
-                      disabled={saving}
-                      className="flex-1 flex items-center justify-center gap-2 bg-emerald-600 text-white px-4 py-2 rounded-lg hover:bg-emerald-700 disabled:opacity-50 transition-colors"
-                    >
-                      {saving ? (
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                      ) : (
-                        <Save className="w-4 h-4" />
-                      )}
-                      Save
-                    </button>
-                    <button
-                      onClick={() => {
-                        setShowUserForm(false);
-                        setEditingUser(null);
-                        setFormData({});
-                      }}
-                      className="flex-1 bg-slate-200 text-slate-700 px-4 py-2 rounded-lg hover:bg-slate-300 transition-colors"
-                    >
-                      Cancel
-                    </button>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead className="bg-slate-50 border-b border-slate-200">
-                    <tr>
-                      <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase">
-                        ID
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase">
-                        Email
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase">
-                        Name
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase">
-                        Role
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase">
-                        Status
-                      </th>
-                      <th className="px-6 py-3 text-center text-xs font-semibold text-slate-600 uppercase">
-                        Actions
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-200">
-                    {users.map((u) => (
-                      <tr key={u.id} className="hover:bg-slate-50 transition-colors">
-                        <td className="px-6 py-4 text-sm text-slate-600">
-                          #{u.id}
-                        </td>
-                        <td className="px-6 py-4 text-sm text-slate-900">
-                          {u.email}
-                        </td>
-                        <td className="px-6 py-4 text-sm text-slate-900">
-                          {u.name}
-                        </td>
-                        <td className="px-6 py-4 text-sm">
-                          <span
-                            className={`px-2 py-1 rounded-full text-xs font-semibold ${
-                              u.role === "admin"
-                                ? "bg-purple-100 text-purple-700"
-                                : "bg-slate-100 text-slate-700"
-                            }`}
-                          >
-                            {u.role}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4 text-sm">
-                          <span
-                            className={`px-2 py-1 rounded-full text-xs font-semibold ${
-                              u.verified
-                                ? "bg-green-100 text-green-700"
-                                : "bg-yellow-100 text-yellow-700"
-                            }`}
-                          >
-                            {u.verified ? "Verified" : "Unverified"}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4 text-center">
-                          <div className="flex gap-2 justify-center">
-                            <button
-                              onClick={() => {
-                                setEditingUser(u);
-                                setFormData(u);
-                                setShowUserForm(true);
-                              }}
-                              className="text-blue-600 hover:text-blue-700"
-                              title="Edit"
-                            >
-                              <Edit className="w-4 h-4" />
-                            </button>
-                            <button
-                              onClick={() => handleDeleteUser(u.id)}
-                              className="text-red-600 hover:text-red-700"
-                              title="Delete"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Items Tab */}
-        {activeTab === "items" && (
-          <div>
-            <div className="flex justify-between items-center mb-6">
-              <h2 className="text-xl font-bold text-slate-900">Items Management</h2>
-              <button
-                onClick={() => {
-                  setShowItemForm(true);
-                  setEditingItem(null);
-                  setItemFormData({});
-                }}
-                className="flex items-center gap-2 bg-emerald-600 text-white px-4 py-2 rounded-lg hover:bg-emerald-700 transition-colors"
-              >
-                <Plus className="w-4 h-4" />
-                Add Item
-              </button>
-            </div>
-
-            {showItemForm && (
-              <div className="bg-white rounded-2xl border border-slate-200 p-6 mb-6">
-                <div className="flex justify-between items-center mb-4">
-                  <h3 className="font-semibold text-lg text-slate-900">
-                    {editingItem ? "Edit Item" : "Create New Item"}
-                  </h3>
-                  <button
-                    onClick={() => {
-                      setShowItemForm(false);
-                      setEditingItem(null);
-                      setItemFormData({});
-                    }}
-                    className="text-slate-400 hover:text-slate-600"
-                  >
-                    <X className="w-5 h-5" />
-                  </button>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">
-                      Title
-                    </label>
-                    <input
-                      type="text"
-                      value={itemFormData.title || ""}
-                      onChange={(e) =>
-                        setItemFormData({ ...itemFormData, title: e.target.value })
-                      }
-                      className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">
-                      Type
-                    </label>
-                    <select
-                      value={itemFormData.type || ""}
-                      onChange={(e) =>
-                        setItemFormData({ ...itemFormData, type: e.target.value })
-                      }
-                      className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500"
-                    >
-                      <option value="">Select Type</option>
-                      <option value="lost">Lost</option>
-                      <option value="found">Found</option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">
-                      Category
-                    </label>
-                    <input
-                      type="text"
-                      value={itemFormData.category || ""}
-                      onChange={(e) =>
-                        setItemFormData({
-                          ...itemFormData,
-                          category: e.target.value,
-                        })
-                      }
-                      className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">
-                      Status
-                    </label>
-                    <select
-                      value={itemFormData.status || ""}
-                      onChange={(e) =>
-                        setItemFormData({ ...itemFormData, status: e.target.value })
-                      }
-                      className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500"
-                    >
-                      <option value="">Select Status</option>
-                      <option value="active">Active</option>
-                      <option value="resolved">Resolved</option>
-                      <option value="archived">Archived</option>
-                    </select>
-                  </div>
-
-                  <div className="col-span-2">
-                    <label className="block text-sm font-medium text-slate-700 mb-1">
-                      Description
-                    </label>
-                    <textarea
-                      value={itemFormData.description || ""}
-                      onChange={(e) =>
-                        setItemFormData({
-                          ...itemFormData,
-                          description: e.target.value,
-                        })
-                      }
-                      rows={3}
-                      className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500"
-                    />
-                  </div>
-                </div>
-
-                <div className="flex gap-3 pt-4">
-                  <button
-                    onClick={handleSaveItem}
-                    disabled={saving}
-                    className="flex-1 flex items-center justify-center gap-2 bg-emerald-600 text-white px-4 py-2 rounded-lg hover:bg-emerald-700 disabled:opacity-50"
-                  >
-                    {saving ? (
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                    ) : (
-                      <Save className="w-4 h-4" />
-                    )}
-                    Save
-                  </button>
-                  <button
-                    onClick={() => {
-                      setShowItemForm(false);
-                      setEditingItem(null);
-                      setItemFormData({});
-                    }}
-                    className="flex-1 bg-slate-200 text-slate-700 px-4 py-2 rounded-lg hover:bg-slate-300"
-                  >
-                    Cancel
-                  </button>
-                </div>
-              </div>
-            )}
-
-            <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead className="bg-slate-50 border-b border-slate-200">
-                    <tr>
-                      <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase">
-                        ID
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase">
-                        Title
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase">
-                        Type
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase">
-                        Status
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase">
-                        Category
-                      </th>
-                      <th className="px-6 py-3 text-center text-xs font-semibold text-slate-600 uppercase">
-                        Actions
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-200">
-                    {items.map((item) => (
-                      <tr key={item.id} className="hover:bg-slate-50">
-                        <td className="px-6 py-4 text-sm text-slate-600">
-                          #{item.id}
-                        </td>
-                        <td className="px-6 py-4 text-sm text-slate-900 font-medium">
-                          {item.title}
-                        </td>
-                        <td className="px-6 py-4 text-sm">
-                          <span
-                            className={`px-2 py-1 rounded-full text-xs font-semibold ${
-                              item.type === "lost"
-                                ? "bg-red-100 text-red-700"
-                                : "bg-green-100 text-green-700"
-                            }`}
-                          >
-                            {item.type}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4 text-sm">
-                          <span
-                            className={`px-2 py-1 rounded-full text-xs font-semibold ${
-                              item.status === "active"
-                                ? "bg-blue-100 text-blue-700"
-                                : item.status === "resolved"
-                                ? "bg-green-100 text-green-700"
-                                : "bg-slate-100 text-slate-700"
-                            }`}
-                          >
-                            {item.status}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4 text-sm text-slate-600">
-                          {item.category}
-                        </td>
-                        <td className="px-6 py-4 text-center">
-                          <div className="flex gap-2 justify-center">
-                            <button
-                              onClick={() => {
-                                setEditingItem(item);
-                                setItemFormData(item);
-                                setShowItemForm(true);
-                              }}
-                              className="text-blue-600 hover:text-blue-700"
-                            >
-                              <Edit className="w-4 h-4" />
-                            </button>
-                            <button
-                              onClick={() => handleDeleteItem(item.id)}
-                              className="text-red-600 hover:text-red-700"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Payments Tab */}
-        {activeTab === "payments" && (
-          <div>
-            <h2 className="text-xl font-bold text-slate-900 mb-6">
-              Payments Management
-            </h2>
-
-            <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead className="bg-slate-50 border-b border-slate-200">
-                    <tr>
-                      <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase">
-                        ID
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase">
-                        User ID
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase">
-                        Item ID
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase">
-                        Amount
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase">
-                        Status
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase">
-                        Date
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-200">
-                    {payments.map((payment) => (
-                      <tr key={payment.id} className="hover:bg-slate-50">
-                        <td className="px-6 py-4 text-sm text-slate-600">
-                          #{payment.id}
-                        </td>
-                        <td className="px-6 py-4 text-sm text-slate-600">
-                          #{payment.userId}
-                        </td>
-                        <td className="px-6 py-4 text-sm text-slate-600">
-                          #{payment.itemId}
-                        </td>
-                        <td className="px-6 py-4 text-sm font-semibold text-slate-900">
-                          ${(payment.amount / 100).toFixed(2)}
-                        </td>
-                        <td className="px-6 py-4 text-sm">
-                          <span
-                            className={`px-2 py-1 rounded-full text-xs font-semibold ${
-                              payment.status === "completed"
-                                ? "bg-green-100 text-green-700"
-                                : payment.status === "pending"
-                                ? "bg-yellow-100 text-yellow-700"
-                                : "bg-red-100 text-red-700"
-                            }`}
-                          >
-                            {payment.status}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4 text-sm text-slate-600">
-                          {new Date(payment.createdAt).toLocaleDateString()}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Messages Tab */}
-        {activeTab === "messages" && (
-          <div>
-            <h2 className="text-xl font-bold text-slate-900 mb-6">
-              Messages Overview
-            </h2>
-            <div className="bg-white rounded-2xl border border-slate-200 p-6 text-center text-slate-600">
-              <MessageSquare className="w-12 h-12 mx-auto mb-4 text-slate-300" />
-              <p>Messages management coming soon</p>
-            </div>
-          </div>
-        )}
-
-        {/* Organization Settings Tab */}
-        {activeTab === "organization" && (
-          <div>
-            <h2 className="text-xl font-bold text-slate-900 mb-6">
-              Organization Settings
-            </h2>
-
-            {orgSettings ? (
-              <div className="bg-white rounded-2xl border border-slate-200 p-6">
-                <div className="space-y-6">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-slate-700 mb-2">
-                        Organization Name
-                      </label>
-                      <input
-                        type="text"
-                        value={orgFormData.organizationName || ""}
-                        onChange={(e) =>
-                          setOrgFormData({
-                            ...orgFormData,
-                            organizationName: e.target.value,
-                          })
-                        }
-                        className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-slate-700 mb-2">
-                        Contact Email
-                      </label>
-                      <input
-                        type="email"
-                        value={orgFormData.contactEmail || ""}
-                        onChange={(e) =>
-                          setOrgFormData({
-                            ...orgFormData,
-                            contactEmail: e.target.value,
-                          })
-                        }
-                        className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-slate-700 mb-2">
-                        Contact Phone
-                      </label>
-                      <input
-                        type="tel"
-                        value={orgFormData.contactPhone || ""}
-                        onChange={(e) =>
-                          setOrgFormData({
-                            ...orgFormData,
-                            contactPhone: e.target.value,
-                          })
-                        }
-                        className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-slate-700 mb-2">
-                        Support Email
-                      </label>
-                      <input
-                        type="email"
-                        value={orgFormData.supportEmail || ""}
-                        onChange={(e) =>
-                          setOrgFormData({
-                            ...orgFormData,
-                            supportEmail: e.target.value,
-                          })
-                        }
-                        className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-slate-700 mb-2">
-                        Support Phone
-                      </label>
-                      <input
-                        type="tel"
-                        value={orgFormData.supportPhone || ""}
-                        onChange={(e) =>
-                          setOrgFormData({
-                            ...orgFormData,
-                            supportPhone: e.target.value,
-                          })
-                        }
-                        className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-slate-700 mb-2">
-                        City
-                      </label>
-                      <input
-                        type="text"
-                        value={orgFormData.city || ""}
-                        onChange={(e) =>
-                          setOrgFormData({
-                            ...orgFormData,
-                            city: e.target.value,
-                          })
-                        }
-                        className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-slate-700 mb-2">
-                        Country
-                      </label>
-                      <input
-                        type="text"
-                        value={orgFormData.country || ""}
-                        onChange={(e) =>
-                          setOrgFormData({
-                            ...orgFormData,
-                            country: e.target.value,
-                          })
-                        }
-                        className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-slate-700 mb-2">
-                        Timezone
-                      </label>
-                      <input
-                        type="text"
-                        value={orgFormData.timezone || "UTC"}
-                        onChange={(e) =>
-                          setOrgFormData({
-                            ...orgFormData,
-                            timezone: e.target.value,
-                          })
-                        }
-                        className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-slate-700 mb-2">
-                        Currency
-                      </label>
-                      <input
-                        type="text"
-                        value={orgFormData.currency || "USD"}
-                        onChange={(e) =>
-                          setOrgFormData({
-                            ...orgFormData,
-                            currency: e.target.value,
-                          })
-                        }
-                        className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-2">
-                      Address
-                    </label>
-                    <textarea
-                      value={orgFormData.address || ""}
-                      onChange={(e) =>
-                        setOrgFormData({
-                          ...orgFormData,
-                          address: e.target.value,
-                        })
-                      }
-                      rows={3}
-                      className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-2">
-                      Description
-                    </label>
-                    <textarea
-                      value={orgFormData.description || ""}
-                      onChange={(e) =>
-                        setOrgFormData({
-                          ...orgFormData,
-                          description: e.target.value,
-                        })
-                      }
-                      rows={3}
-                      className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
-                    />
-                  </div>
-
-                  <div className="flex gap-3 pt-4 border-t border-slate-200">
-                    <button
-                      onClick={handleSaveOrgSettings}
-                      disabled={saving}
-                      className="flex items-center justify-center gap-2 bg-emerald-600 text-white px-6 py-2 rounded-lg hover:bg-emerald-700 disabled:opacity-50 transition-colors"
-                    >
-                      {saving ? (
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                      ) : (
-                        <Save className="w-4 h-4" />
-                      )}
-                      Save Settings
-                    </button>
-                  </div>
-                </div>
-              </div>
-            ) : (
-              <div className="flex items-center justify-center py-20">
-                <Loader2 className="w-8 h-8 text-emerald-600 animate-spin" />
-              </div>
-            )}
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
+interface Stats {
   totalUsers: number;
   totalItems: number;
   totalRevenue: number;
@@ -1222,17 +72,48 @@ interface AdminItem {
   userEmail: string | null;
 }
 
-export default function AdminPage() {
+interface AdminMessage {
+  id: number;
+  content: string;
+  senderName: string;
+  receiverName: string;
+  itemTitle: string;
+  createdAt: string;
+}
+
+interface OrganizationSettings {
+  id?: number;
+  organizationName: string;
+  description?: string;
+  contactEmail: string;
+  contactPhone?: string;
+  address?: string;
+  city?: string;
+  country?: string;
+  supportEmail?: string;
+  supportPhone?: string;
+  timezone?: string;
+  currency?: string;
+}
+
+type TabType = "overview" | "users" | "items" | "messages" | "payments" | "settings";
+
+export default function AdminDashboard() {
   const { user } = useAuth();
   const router = useRouter();
-  const [activeTab, setActiveTab] = useState<"overview" | "users" | "items">(
-    "overview"
-  );
+  const [activeTab, setActiveTab] = useState<TabType>("overview");
   const [stats, setStats] = useState<Stats | null>(null);
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [items, setItems] = useState<AdminItem[]>([]);
+  const [messages, setMessages] = useState<AdminMessage[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [editingUser, setEditingUser] = useState<AdminUser | null>(null);
+  const [editingItem, setEditingItem] = useState<AdminItem | null>(null);
+  const [settings, setSettings] = useState<OrganizationSettings | null>(null);
+  const [editingSettings, setEditingSettings] = useState<OrganizationSettings | null>(null);
+  const [showUserModal, setShowUserModal] = useState(false);
+  const [newUser, setNewUser] = useState({ name: "", email: "", password: "" });
 
   useEffect(() => {
     if (!user) return;
@@ -1246,10 +127,12 @@ export default function AdminPage() {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const [statsRes, usersRes, itemsRes] = await Promise.all([
+      const [statsRes, usersRes, itemsRes, messagesRes, settingsRes] = await Promise.all([
         fetch("/api/admin/stats"),
         fetch("/api/admin/users"),
         fetch("/api/admin/items"),
+        fetch("/api/admin/messages"),
+        fetch("/api/admin/settings"),
       ]);
 
       if (statsRes.ok) {
@@ -1264,6 +147,14 @@ export default function AdminPage() {
         const itemsData = await itemsRes.json();
         setItems(itemsData.items);
       }
+      if (messagesRes.ok) {
+        const messagesData = await messagesRes.json();
+        setMessages(messagesData.messages);
+      }
+      if (settingsRes.ok) {
+        const settingsData = await settingsRes.json();
+        setSettings(settingsData.settings);
+      }
     } catch {
       setError("Failed to load admin data");
     } finally {
@@ -1271,22 +162,113 @@ export default function AdminPage() {
     }
   };
 
-  const toggleUserVerified = async (userId: number, verified: boolean) => {
+  // User Management Functions
+  const handleSaveUser = async () => {
+    if (editingUser) {
+      try {
+        const res = await fetch("/api/admin/users", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(editingUser),
+        });
+        if (res.ok) {
+          setUsers((prev) =>
+            prev.map((u) => (u.id === editingUser.id ? editingUser : u))
+          );
+          setEditingUser(null);
+        }
+      } catch (error) {
+        console.error("Error saving user:", error);
+      }
+    }
+  };
+
+  const handleDeleteUser = async (userId: number) => {
+    if (confirm("Are you sure you want to delete this user?")) {
+      try {
+        const res = await fetch(`/api/admin/users/${userId}`, {
+          method: "DELETE",
+        });
+        if (res.ok) {
+          setUsers((prev) => prev.filter((u) => u.id !== userId));
+        }
+      } catch (error) {
+        console.error("Error deleting user:", error);
+      }
+    }
+  };
+
+  const handleCreateUser = async () => {
+    if (!newUser.name || !newUser.email || !newUser.password) return;
     try {
       const res = await fetch("/api/admin/users", {
-        method: "PATCH",
+        method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId, verified: !verified }),
+        body: JSON.stringify(newUser),
       });
       if (res.ok) {
-        setUsers((prev) =>
-          prev.map((u) =>
-            u.id === userId ? { ...u, verified: !verified } : u
-          )
-        );
+        const data = await res.json();
+        setUsers((prev) => [...prev, data.user]);
+        setNewUser({ name: "", email: "", password: "" });
+        setShowUserModal(false);
       }
-    } catch {
-      // ignore
+    } catch (error) {
+      console.error("Error creating user:", error);
+    }
+  };
+
+  // Item Management Functions
+  const handleSaveItem = async () => {
+    if (editingItem) {
+      try {
+        const res = await fetch(`/api/admin/items/${editingItem.id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(editingItem),
+        });
+        if (res.ok) {
+          setItems((prev) =>
+            prev.map((i) => (i.id === editingItem.id ? editingItem : i))
+          );
+          setEditingItem(null);
+        }
+      } catch (error) {
+        console.error("Error saving item:", error);
+      }
+    }
+  };
+
+  const handleDeleteItem = async (itemId: number) => {
+    if (confirm("Are you sure you want to delete this item?")) {
+      try {
+        const res = await fetch(`/api/admin/items/${itemId}`, {
+          method: "DELETE",
+        });
+        if (res.ok) {
+          setItems((prev) => prev.filter((i) => i.id !== itemId));
+        }
+      } catch (error) {
+        console.error("Error deleting item:", error);
+      }
+    }
+  };
+
+  // Settings Management Functions
+  const handleSaveSettings = async () => {
+    if (!editingSettings) return;
+    try {
+      const res = await fetch("/api/admin/settings", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(editingSettings),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setSettings(data.settings);
+        setEditingSettings(null);
+      }
+    } catch (error) {
+      console.error("Error saving settings:", error);
     }
   };
 
@@ -1314,6 +296,15 @@ export default function AdminPage() {
     );
   }
 
+  const tabs: { id: TabType; label: string; icon: any }[] = [
+    { id: "overview", label: "Overview", icon: BarChart3 },
+    { id: "users", label: "Users", icon: Users },
+    { id: "items", label: "Items", icon: Package },
+    { id: "messages", label: "Messages", icon: MessageSquare },
+    { id: "payments", label: "Payments", icon: DollarSign },
+    { id: "settings", label: "Settings", icon: Settings },
+  ];
+
   return (
     <div className="min-h-[calc(100vh-64px)] bg-slate-50">
       <div className="bg-white border-b border-slate-200">
@@ -1323,23 +314,19 @@ export default function AdminPage() {
             <h1 className="text-3xl font-bold text-slate-900">Admin Panel</h1>
           </div>
           <p className="text-slate-600">
-            Manage listings, users, and platform analytics
+            Complete platform management and administration
           </p>
         </div>
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Tabs */}
-        <div className="flex gap-2 mb-8">
-          {[
-            { id: "overview" as const, label: "Overview", icon: BarChart3 },
-            { id: "users" as const, label: "Users", icon: Users },
-            { id: "items" as const, label: "Items", icon: Package },
-          ].map(({ id, label, icon: Icon }) => (
+        <div className="flex gap-2 mb-8 overflow-x-auto pb-2">
+          {tabs.map(({ id, label, icon: Icon }) => (
             <button
               key={id}
               onClick={() => setActiveTab(id)}
-              className={`flex items-center gap-2 px-5 py-2.5 rounded-lg font-medium transition-colors ${
+              className={`flex items-center gap-2 px-5 py-2.5 rounded-lg font-medium transition-colors whitespace-nowrap ${
                 activeTab === id
                   ? "bg-emerald-600 text-white"
                   : "bg-white text-slate-600 border border-slate-200 hover:bg-slate-50"
@@ -1361,206 +348,116 @@ export default function AdminPage() {
             {activeTab === "overview" && stats && (
               <div className="space-y-6">
                 <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                  <div className="bg-white rounded-xl border border-slate-200 p-6">
-                    <div className="flex items-center gap-3 mb-3">
-                      <div className="w-10 h-10 bg-emerald-100 rounded-lg flex items-center justify-center">
-                        <Users className="w-5 h-5 text-emerald-600" />
-                      </div>
-                      <div className="text-sm text-slate-500">Total Users</div>
-                    </div>
-                    <div className="text-3xl font-bold text-slate-900">
-                      {stats.totalUsers}
-                    </div>
-                  </div>
-                  <div className="bg-white rounded-xl border border-slate-200 p-6">
-                    <div className="flex items-center gap-3 mb-3">
-                      <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-                        <Package className="w-5 h-5 text-blue-600" />
-                      </div>
-                      <div className="text-sm text-slate-500">Total Items</div>
-                    </div>
-                    <div className="text-3xl font-bold text-slate-900">
-                      {stats.totalItems}
-                    </div>
-                  </div>
-                  <div className="bg-white rounded-xl border border-slate-200 p-6">
-                    <div className="flex items-center gap-3 mb-3">
-                      <div className="w-10 h-10 bg-amber-100 rounded-lg flex items-center justify-center">
-                        <DollarSign className="w-5 h-5 text-amber-600" />
-                      </div>
-                      <div className="text-sm text-slate-500">Revenue</div>
-                    </div>
-                    <div className="text-3xl font-bold text-slate-900">
-                      {formatCurrency(stats.totalRevenue)}
-                    </div>
-                  </div>
-                  <div className="bg-white rounded-xl border border-slate-200 p-6">
-                    <div className="flex items-center gap-3 mb-3">
-                      <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
-                        <CheckCircle className="w-5 h-5 text-purple-600" />
-                      </div>
-                      <div className="text-sm text-slate-500">
-                        Transactions
-                      </div>
-                    </div>
-                    <div className="text-3xl font-bold text-slate-900">
-                      {stats.totalTransactions}
-                    </div>
-                  </div>
-                </div>
-
-                <div className="grid lg:grid-cols-2 gap-6">
-                  <div className="bg-white rounded-xl border border-slate-200 p-6">
-                    <h3 className="font-semibold text-slate-900 mb-4">
-                      Items by Type
-                    </h3>
-                    <div className="space-y-3">
-                      {stats.itemsByType.map(({ type, count }) => (
-                        <div key={type} className="flex items-center gap-3">
-                          <div
-                            className={`w-3 h-3 rounded-full ${
-                              type === "lost"
-                                ? "bg-red-500"
-                                : "bg-emerald-500"
-                            }`}
-                          />
-                          <div className="flex-1 text-sm text-slate-600 capitalize">
-                            {type}
-                          </div>
-                          <div className="font-semibold text-slate-900">
-                            {count}
-                          </div>
+                  {[
+                    { label: "Total Users", value: stats.totalUsers, icon: Users, color: "emerald" },
+                    { label: "Total Items", value: stats.totalItems, icon: Package, color: "blue" },
+                    { label: "Revenue", value: formatCurrency(stats.totalRevenue), icon: DollarSign, color: "amber" },
+                    { label: "Transactions", value: stats.totalTransactions, icon: CheckCircle, color: "purple" },
+                  ].map(({ label, value, icon: Icon, color }) => (
+                    <div key={label} className="bg-white rounded-xl border border-slate-200 p-6">
+                      <div className="flex items-center gap-3 mb-3">
+                        <div className={`w-10 h-10 bg-${color}-100 rounded-lg flex items-center justify-center`}>
+                          <Icon className={`w-5 h-5 text-${color}-600`} />
                         </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div className="bg-white rounded-xl border border-slate-200 p-6">
-                    <h3 className="font-semibold text-slate-900 mb-4">
-                      Items by Status
-                    </h3>
-                    <div className="space-y-3">
-                      {stats.itemsByStatus.map(({ status, count }) => (
-                        <div key={status} className="flex items-center gap-3">
-                          <div
-                            className={`w-3 h-3 rounded-full ${
-                              status === "active"
-                                ? "bg-emerald-500"
-                                : status === "resolved"
-                                ? "bg-blue-500"
-                                : "bg-slate-400"
-                            }`}
-                          />
-                          <div className="flex-1 text-sm text-slate-600 capitalize">
-                            {status}
-                          </div>
-                          <div className="font-semibold text-slate-900">
-                            {count}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-
-                <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
-                  <div className="px-6 py-4 border-b border-slate-200">
-                    <h3 className="font-semibold text-slate-900">
-                      Recent Listings
-                    </h3>
-                  </div>
-                  <div className="divide-y divide-slate-200">
-                    {stats.recentItems.map((item) => (
-                      <div
-                        key={item.id}
-                        className="px-6 py-4 flex items-center justify-between"
-                      >
-                        <div>
-                          <div className="font-medium text-slate-900 text-sm">
-                            {item.title}
-                          </div>
-                          <div className="text-xs text-slate-500 mt-0.5">
-                            {formatDate(item.createdAt)}
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <span
-                            className={`px-2 py-0.5 rounded text-xs font-semibold ${
-                              item.type === "lost"
-                                ? "bg-red-100 text-red-700"
-                                : "bg-emerald-100 text-emerald-700"
-                            }`}
-                          >
-                            {item.type}
-                          </span>
-                          <span
-                            className={`px-2 py-0.5 rounded text-xs font-semibold capitalize ${
-                              item.status === "active"
-                                ? "bg-emerald-100 text-emerald-700"
-                                : item.status === "resolved"
-                                ? "bg-blue-100 text-blue-700"
-                                : "bg-slate-100 text-slate-600"
-                            }`}
-                          >
-                            {item.status}
-                          </span>
-                        </div>
+                        <div className="text-sm text-slate-500">{label}</div>
                       </div>
-                    ))}
-                  </div>
+                      <div className="text-3xl font-bold text-slate-900">{value}</div>
+                    </div>
+                  ))}
                 </div>
               </div>
             )}
 
             {/* Users Tab */}
             {activeTab === "users" && (
-              <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
-                <div className="px-6 py-4 border-b border-slate-200">
-                  <h3 className="font-semibold text-slate-900">
-                    All Users ({users.length})
-                  </h3>
+              <div className="space-y-4">
+                <div className="flex justify-between items-center">
+                  <h2 className="text-lg font-semibold text-slate-900">Users Management</h2>
+                  <button
+                    onClick={() => setShowUserModal(true)}
+                    className="bg-emerald-600 text-white px-4 py-2 rounded-lg hover:bg-emerald-700 flex items-center gap-2"
+                  >
+                    <Plus className="w-4 h-4" />
+                    Add User
+                  </button>
                 </div>
-                <div className="overflow-x-auto">
+
+                {/* Add User Modal */}
+                {showUserModal && (
+                  <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+                    <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+                      <div className="flex justify-between items-center mb-4">
+                        <h3 className="text-lg font-semibold">Add New User</h3>
+                        <button onClick={() => setShowUserModal(false)}>
+                          <X className="w-5 h-5" />
+                        </button>
+                      </div>
+                      <div className="space-y-4">
+                        <input
+                          type="text"
+                          placeholder="Name"
+                          value={newUser.name}
+                          onChange={(e) => setNewUser({ ...newUser, name: e.target.value })}
+                          className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none"
+                        />
+                        <input
+                          type="email"
+                          placeholder="Email"
+                          value={newUser.email}
+                          onChange={(e) => setNewUser({ ...newUser, email: e.target.value })}
+                          className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none"
+                        />
+                        <input
+                          type="password"
+                          placeholder="Password"
+                          value={newUser.password}
+                          onChange={(e) => setNewUser({ ...newUser, password: e.target.value })}
+                          className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none"
+                        />
+                        <div className="flex gap-2 pt-4">
+                          <button
+                            onClick={handleCreateUser}
+                            className="flex-1 bg-emerald-600 text-white py-2 rounded-lg hover:bg-emerald-700"
+                          >
+                            Create User
+                          </button>
+                          <button
+                            onClick={() => setShowUserModal(false)}
+                            className="flex-1 bg-slate-200 text-slate-700 py-2 rounded-lg hover:bg-slate-300"
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                <div className="bg-white rounded-xl border border-slate-200 overflow-x-auto">
                   <table className="w-full">
                     <thead>
                       <tr className="bg-slate-50">
-                        <th className="text-left px-6 py-3 text-xs font-semibold text-slate-500 uppercase">
-                          Name
-                        </th>
-                        <th className="text-left px-6 py-3 text-xs font-semibold text-slate-500 uppercase">
-                          Email
-                        </th>
-                        <th className="text-left px-6 py-3 text-xs font-semibold text-slate-500 uppercase">
-                          Role
-                        </th>
-                        <th className="text-left px-6 py-3 text-xs font-semibold text-slate-500 uppercase">
-                          Verified
-                        </th>
-                        <th className="text-left px-6 py-3 text-xs font-semibold text-slate-500 uppercase">
-                          Joined
-                        </th>
-                        <th className="text-left px-6 py-3 text-xs font-semibold text-slate-500 uppercase">
-                          Actions
-                        </th>
+                        <th className="text-left px-6 py-3 text-xs font-semibold text-slate-500 uppercase">Name</th>
+                        <th className="text-left px-6 py-3 text-xs font-semibold text-slate-500 uppercase">Email</th>
+                        <th className="text-left px-6 py-3 text-xs font-semibold text-slate-500 uppercase">Phone</th>
+                        <th className="text-left px-6 py-3 text-xs font-semibold text-slate-500 uppercase">Role</th>
+                        <th className="text-left px-6 py-3 text-xs font-semibold text-slate-500 uppercase">Status</th>
+                        <th className="text-left px-6 py-3 text-xs font-semibold text-slate-500 uppercase">Joined</th>
+                        <th className="text-left px-6 py-3 text-xs font-semibold text-slate-500 uppercase">Actions</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-200">
                       {users.map((u) => (
                         <tr key={u.id} className="hover:bg-slate-50">
-                          <td className="px-6 py-4 text-sm text-slate-900 font-medium">
-                            {u.name}
-                          </td>
-                          <td className="px-6 py-4 text-sm text-slate-600">
-                            {u.email}
-                          </td>
+                          <td className="px-6 py-4 text-sm text-slate-900 font-medium">{u.name}</td>
+                          <td className="px-6 py-4 text-sm text-slate-600">{u.email}</td>
+                          <td className="px-6 py-4 text-sm text-slate-600">{u.phone || "-"}</td>
                           <td className="px-6 py-4">
-                            <span
-                              className={`px-2 py-0.5 rounded text-xs font-semibold capitalize ${
-                                u.role === "admin"
-                                  ? "bg-purple-100 text-purple-700"
-                                  : "bg-slate-100 text-slate-600"
-                              }`}
-                            >
+                            <span className={`px-2 py-0.5 rounded text-xs font-semibold capitalize ${
+                              u.role === "admin"
+                                ? "bg-purple-100 text-purple-700"
+                                : "bg-slate-100 text-slate-600"
+                            }`}>
                               {u.role}
                             </span>
                           </td>
@@ -1571,121 +468,454 @@ export default function AdminPage() {
                               <XCircle className="w-4 h-4 text-slate-400" />
                             )}
                           </td>
-                          <td className="px-6 py-4 text-sm text-slate-500">
-                            {formatDate(u.createdAt)}
-                          </td>
+                          <td className="px-6 py-4 text-sm text-slate-500">{formatDate(u.createdAt)}</td>
                           <td className="px-6 py-4">
-                            <button
-                              onClick={() =>
-                                toggleUserVerified(u.id, u.verified)
-                              }
-                              className="text-sm text-emerald-600 hover:text-emerald-700 flex items-center gap-1"
-                            >
-                              <UserCheck className="w-4 h-4" />
-                              {u.verified ? "Unverify" : "Verify"}
-                            </button>
+                            <div className="flex gap-2">
+                              <button
+                                onClick={() => setEditingUser(u)}
+                                className="text-emerald-600 hover:text-emerald-700"
+                              >
+                                <Edit className="w-4 h-4" />
+                              </button>
+                              <button
+                                onClick={() => handleDeleteUser(u.id)}
+                                className="text-red-600 hover:text-red-700"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            </div>
                           </td>
                         </tr>
                       ))}
                     </tbody>
                   </table>
                 </div>
+
+                {/* Edit User Modal */}
+                {editingUser && (
+                  <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+                    <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+                      <div className="flex justify-between items-center mb-4">
+                        <h3 className="text-lg font-semibold">Edit User</h3>
+                        <button onClick={() => setEditingUser(null)}>
+                          <X className="w-5 h-5" />
+                        </button>
+                      </div>
+                      <div className="space-y-4">
+                        <div>
+                          <label className="block text-sm font-medium text-slate-700 mb-1">Name</label>
+                          <input
+                            type="text"
+                            value={editingUser.name}
+                            onChange={(e) => setEditingUser({ ...editingUser, name: e.target.value })}
+                            className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-slate-700 mb-1">Email</label>
+                          <input
+                            type="email"
+                            value={editingUser.email}
+                            onChange={(e) => setEditingUser({ ...editingUser, email: e.target.value })}
+                            className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-slate-700 mb-1">Phone</label>
+                          <input
+                            type="text"
+                            value={editingUser.phone || ""}
+                            onChange={(e) => setEditingUser({ ...editingUser, phone: e.target.value || null })}
+                            className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-slate-700 mb-1">Role</label>
+                          <select
+                            value={editingUser.role}
+                            onChange={(e) => setEditingUser({ ...editingUser, role: e.target.value })}
+                            className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none"
+                          >
+                            <option value="user">User</option>
+                            <option value="admin">Admin</option>
+                          </select>
+                        </div>
+                        <div>
+                          <label className="flex items-center gap-2">
+                            <input
+                              type="checkbox"
+                              checked={editingUser.verified}
+                              onChange={(e) => setEditingUser({ ...editingUser, verified: e.target.checked })}
+                              className="w-4 h-4"
+                            />
+                            <span className="text-sm font-medium text-slate-700">Verified</span>
+                          </label>
+                        </div>
+                        <div className="flex gap-2 pt-4">
+                          <button
+                            onClick={handleSaveUser}
+                            className="flex-1 bg-emerald-600 text-white py-2 rounded-lg hover:bg-emerald-700 flex items-center justify-center gap-2"
+                          >
+                            <Save className="w-4 h-4" />
+                            Save Changes
+                          </button>
+                          <button
+                            onClick={() => setEditingUser(null)}
+                            className="flex-1 bg-slate-200 text-slate-700 py-2 rounded-lg hover:bg-slate-300"
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 
             {/* Items Tab */}
             {activeTab === "items" && (
-              <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+              <div className="bg-white rounded-xl border border-slate-200 overflow-x-auto">
                 <div className="px-6 py-4 border-b border-slate-200">
-                  <h3 className="font-semibold text-slate-900">
-                    All Items ({items.length})
-                  </h3>
+                  <h3 className="font-semibold text-slate-900">All Items ({items.length})</h3>
                 </div>
-                <div className="overflow-x-auto">
-                  <table className="w-full">
-                    <thead>
-                      <tr className="bg-slate-50">
-                        <th className="text-left px-6 py-3 text-xs font-semibold text-slate-500 uppercase">
-                          Title
-                        </th>
-                        <th className="text-left px-6 py-3 text-xs font-semibold text-slate-500 uppercase">
-                          Type
-                        </th>
-                        <th className="text-left px-6 py-3 text-xs font-semibold text-slate-500 uppercase">
-                          Category
-                        </th>
-                        <th className="text-left px-6 py-3 text-xs font-semibold text-slate-500 uppercase">
-                          Location
-                        </th>
-                        <th className="text-left px-6 py-3 text-xs font-semibold text-slate-500 uppercase">
-                          Status
-                        </th>
-                        <th className="text-left px-6 py-3 text-xs font-semibold text-slate-500 uppercase">
-                          Posted By
-                        </th>
-                        <th className="text-left px-6 py-3 text-xs font-semibold text-slate-500 uppercase">
-                          Actions
-                        </th>
+                <table className="w-full">
+                  <thead>
+                    <tr className="bg-slate-50">
+                      <th className="text-left px-6 py-3 text-xs font-semibold text-slate-500 uppercase">Title</th>
+                      <th className="text-left px-6 py-3 text-xs font-semibold text-slate-500 uppercase">Type</th>
+                      <th className="text-left px-6 py-3 text-xs font-semibold text-slate-500 uppercase">Status</th>
+                      <th className="text-left px-6 py-3 text-xs font-semibold text-slate-500 uppercase">Location</th>
+                      <th className="text-left px-6 py-3 text-xs font-semibold text-slate-500 uppercase">Posted By</th>
+                      <th className="text-left px-6 py-3 text-xs font-semibold text-slate-500 uppercase">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-200">
+                    {items.map((item) => (
+                      <tr key={item.id} className="hover:bg-slate-50">
+                        <td className="px-6 py-4 text-sm text-slate-900 font-medium max-w-xs truncate">{item.title}</td>
+                        <td className="px-6 py-4">
+                          <span className={`px-2 py-0.5 rounded text-xs font-semibold ${
+                            item.type === "lost"
+                              ? "bg-red-100 text-red-700"
+                              : "bg-emerald-100 text-emerald-700"
+                          }`}>
+                            {item.type}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4">
+                          <span className={`px-2 py-0.5 rounded text-xs font-semibold capitalize ${
+                            item.status === "active"
+                              ? "bg-emerald-100 text-emerald-700"
+                              : item.status === "resolved"
+                              ? "bg-blue-100 text-blue-700"
+                              : "bg-slate-100 text-slate-600"
+                          }`}>
+                            {item.status}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 text-sm text-slate-600 max-w-xs truncate">
+                          <div className="flex items-center gap-1">
+                            <MapPin className="w-3 h-3" />
+                            {item.approximateLocation}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 text-sm text-slate-600">{item.userName || "Unknown"}</td>
+                        <td className="px-6 py-4">
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() => setEditingItem(item)}
+                              className="text-emerald-600 hover:text-emerald-700"
+                            >
+                              <Edit className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={() => handleDeleteItem(item.id)}
+                              className="text-red-600 hover:text-red-700"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </td>
                       </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-200">
-                      {items.map((item) => (
-                        <tr key={item.id} className="hover:bg-slate-50">
-                          <td className="px-6 py-4 text-sm text-slate-900 font-medium max-w-xs truncate">
-                            {item.title}
-                          </td>
-                          <td className="px-6 py-4">
-                            <span
-                              className={`px-2 py-0.5 rounded text-xs font-semibold ${
-                                item.type === "lost"
-                                  ? "bg-red-100 text-red-700"
-                                  : "bg-emerald-100 text-emerald-700"
-                              }`}
-                            >
-                              {item.type}
-                            </span>
-                          </td>
-                          <td className="px-6 py-4 text-sm text-slate-600">
-                            {item.category}
-                          </td>
-                          <td className="px-6 py-4 text-sm text-slate-600 max-w-xs truncate">
-                            <div className="flex items-center gap-1">
-                              <MapPin className="w-3 h-3" />
-                              {item.approximateLocation}
-                            </div>
-                          </td>
-                          <td className="px-6 py-4">
-                            <span
-                              className={`px-2 py-0.5 rounded text-xs font-semibold capitalize ${
-                                item.status === "active"
-                                  ? "bg-emerald-100 text-emerald-700"
-                                  : item.status === "resolved"
-                                  ? "bg-blue-100 text-blue-700"
-                                  : "bg-slate-100 text-slate-600"
-                              }`}
-                            >
-                              {item.status}
-                            </span>
-                          </td>
-                          <td className="px-6 py-4 text-sm text-slate-600">
-                            {item.userName || "Unknown"}
-                          </td>
-                          <td className="px-6 py-4">
-                            <a
-                              href={`/items/${item.id}`}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="text-sm text-emerald-600 hover:text-emerald-700 flex items-center gap-1"
-                            >
-                              <Eye className="w-4 h-4" />
-                              View
-                            </a>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                    ))}
+                  </tbody>
+                </table>
+
+                {/* Edit Item Modal */}
+                {editingItem && (
+                  <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+                    <div className="bg-white rounded-lg p-6 max-w-md w-full max-h-[90vh] overflow-y-auto">
+                      <div className="flex justify-between items-center mb-4">
+                        <h3 className="text-lg font-semibold">Edit Item</h3>
+                        <button onClick={() => setEditingItem(null)}>
+                          <X className="w-5 h-5" />
+                        </button>
+                      </div>
+                      <div className="space-y-4">
+                        <div>
+                          <label className="block text-sm font-medium text-slate-700 mb-1">Title</label>
+                          <input
+                            type="text"
+                            value={editingItem.title}
+                            onChange={(e) => setEditingItem({ ...editingItem, title: e.target.value })}
+                            className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-slate-700 mb-1">Description</label>
+                          <textarea
+                            value={editingItem.description}
+                            onChange={(e) => setEditingItem({ ...editingItem, description: e.target.value })}
+                            className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none"
+                            rows={3}
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-slate-700 mb-1">Status</label>
+                          <select
+                            value={editingItem.status}
+                            onChange={(e) => setEditingItem({ ...editingItem, status: e.target.value })}
+                            className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none"
+                          >
+                            <option value="active">Active</option>
+                            <option value="resolved">Resolved</option>
+                            <option value="archived">Archived</option>
+                          </select>
+                        </div>
+                        <div className="flex gap-2 pt-4">
+                          <button
+                            onClick={handleSaveItem}
+                            className="flex-1 bg-emerald-600 text-white py-2 rounded-lg hover:bg-emerald-700 flex items-center justify-center gap-2"
+                          >
+                            <Save className="w-4 h-4" />
+                            Save Changes
+                          </button>
+                          <button
+                            onClick={() => setEditingItem(null)}
+                            className="flex-1 bg-slate-200 text-slate-700 py-2 rounded-lg hover:bg-slate-300"
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Messages Tab */}
+            {activeTab === "messages" && (
+              <div className="bg-white rounded-xl border border-slate-200 overflow-x-auto">
+                <div className="px-6 py-4 border-b border-slate-200">
+                  <h3 className="font-semibold text-slate-900">All Messages ({messages.length})</h3>
                 </div>
+                <table className="w-full">
+                  <thead>
+                    <tr className="bg-slate-50">
+                      <th className="text-left px-6 py-3 text-xs font-semibold text-slate-500 uppercase">From</th>
+                      <th className="text-left px-6 py-3 text-xs font-semibold text-slate-500 uppercase">To</th>
+                      <th className="text-left px-6 py-3 text-xs font-semibold text-slate-500 uppercase">Item</th>
+                      <th className="text-left px-6 py-3 text-xs font-semibold text-slate-500 uppercase">Content</th>
+                      <th className="text-left px-6 py-3 text-xs font-semibold text-slate-500 uppercase">Date</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-200">
+                    {messages.map((msg) => (
+                      <tr key={msg.id} className="hover:bg-slate-50">
+                        <td className="px-6 py-4 text-sm text-slate-900 font-medium">{msg.senderName}</td>
+                        <td className="px-6 py-4 text-sm text-slate-600">{msg.receiverName}</td>
+                        <td className="px-6 py-4 text-sm text-slate-600 max-w-xs truncate">{msg.itemTitle}</td>
+                        <td className="px-6 py-4 text-sm text-slate-600 max-w-xs truncate">{msg.content}</td>
+                        <td className="px-6 py-4 text-sm text-slate-500">{formatDate(msg.createdAt)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+
+            {/* Settings Tab */}
+            {activeTab === "settings" && (
+              <div className="space-y-6">
+                <div className="bg-white rounded-xl border border-slate-200 p-6">
+                  <div className="flex justify-between items-center mb-6">
+                    <div className="flex items-center gap-3">
+                      <Building className="w-6 h-6 text-emerald-600" />
+                      <h3 className="text-lg font-semibold text-slate-900">Organization Settings</h3>
+                    </div>
+                    <button
+                      onClick={() => settings && setEditingSettings(settings)}
+                      disabled={!settings}
+                      className={`bg-emerald-600 text-white px-4 py-2 rounded-lg hover:bg-emerald-700 flex items-center gap-2 ${
+                        !settings ? "opacity-50 cursor-not-allowed hover:bg-emerald-600" : ""
+                      }`}
+                    >
+                      <Edit className="w-4 h-4" />
+                      Edit Settings
+                    </button>
+                  </div>
+
+                  {settings ? (
+                    <div className="grid sm:grid-cols-2 gap-6">
+                      <div>
+                        <label className="block text-sm font-medium text-slate-500 mb-1">Organization Name</label>
+                        <p className="text-lg font-semibold text-slate-900">{settings.organizationName}</p>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-slate-500 mb-1">Contact Email</label>
+                        <p className="text-lg font-semibold text-slate-900 flex items-center gap-2">
+                          <Mail className="w-4 h-4" />
+                          {settings.contactEmail}
+                        </p>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-slate-500 mb-1">Contact Phone</label>
+                        <p className="text-lg font-semibold text-slate-900 flex items-center gap-2">
+                          <Phone className="w-4 h-4" />
+                          {settings.contactPhone || "-"}
+                        </p>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-slate-500 mb-1">Support Email</label>
+                        <p className="text-lg font-semibold text-slate-900">{settings.supportEmail || "-"}</p>
+                      </div>
+                      <div className="sm:col-span-2">
+                        <label className="block text-sm font-medium text-slate-500 mb-1">Address</label>
+                        <p className="text-lg font-semibold text-slate-900">{settings.address || "-"}</p>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-slate-500 mb-1">City</label>
+                        <p className="text-lg font-semibold text-slate-900">{settings.city || "-"}</p>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-slate-500 mb-1">Country</label>
+                        <p className="text-lg font-semibold text-slate-900">{settings.country || "-"}</p>
+                      </div>
+                    </div>
+                  ) : (
+                    <p className="text-slate-600">No settings configured yet</p>
+                  )}
+                </div>
+
+                {/* Edit Settings Modal */}
+                {editingSettings && (
+                  <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+                    <div className="bg-white rounded-lg p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+                      <div className="flex justify-between items-center mb-4">
+                        <h3 className="text-lg font-semibold">Edit Organization Settings</h3>
+                        <button onClick={() => setEditingSettings(null)}>
+                          <X className="w-5 h-5" />
+                        </button>
+                      </div>
+                      <div className="space-y-4">
+                        <div>
+                          <label className="block text-sm font-medium text-slate-700 mb-1">Organization Name</label>
+                          <input
+                            type="text"
+                            value={editingSettings.organizationName}
+                            onChange={(e) => setEditingSettings({ ...editingSettings, organizationName: e.target.value })}
+                            className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-slate-700 mb-1">Description</label>
+                          <textarea
+                            value={editingSettings.description || ""}
+                            onChange={(e) => setEditingSettings({ ...editingSettings, description: e.target.value })}
+                            className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none"
+                            rows={3}
+                          />
+                        </div>
+                        <div className="grid sm:grid-cols-2 gap-4">
+                          <div>
+                            <label className="block text-sm font-medium text-slate-700 mb-1">Contact Email</label>
+                            <input
+                              type="email"
+                              value={editingSettings.contactEmail}
+                              onChange={(e) => setEditingSettings({ ...editingSettings, contactEmail: e.target.value })}
+                              className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium text-slate-700 mb-1">Contact Phone</label>
+                            <input
+                              type="text"
+                              value={editingSettings.contactPhone || ""}
+                              onChange={(e) => setEditingSettings({ ...editingSettings, contactPhone: e.target.value })}
+                              className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none"
+                            />
+                          </div>
+                        </div>
+                        <div className="grid sm:grid-cols-2 gap-4">
+                          <div>
+                            <label className="block text-sm font-medium text-slate-700 mb-1">Support Email</label>
+                            <input
+                              type="email"
+                              value={editingSettings.supportEmail || ""}
+                              onChange={(e) => setEditingSettings({ ...editingSettings, supportEmail: e.target.value })}
+                              className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium text-slate-700 mb-1">Support Phone</label>
+                            <input
+                              type="text"
+                              value={editingSettings.supportPhone || ""}
+                              onChange={(e) => setEditingSettings({ ...editingSettings, supportPhone: e.target.value })}
+                              className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none"
+                            />
+                          </div>
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-slate-700 mb-1">Address</label>
+                          <input
+                            type="text"
+                            value={editingSettings.address || ""}
+                            onChange={(e) => setEditingSettings({ ...editingSettings, address: e.target.value })}
+                            className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none"
+                          />
+                        </div>
+                        <div className="grid sm:grid-cols-2 gap-4">
+                          <div>
+                            <label className="block text-sm font-medium text-slate-700 mb-1">City</label>
+                            <input
+                              type="text"
+                              value={editingSettings.city || ""}
+                              onChange={(e) => setEditingSettings({ ...editingSettings, city: e.target.value })}
+                              className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-sm font-medium text-slate-700 mb-1">Country</label>
+                            <input
+                              type="text"
+                              value={editingSettings.country || ""}
+                              onChange={(e) => setEditingSettings({ ...editingSettings, country: e.target.value })}
+                              className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none"
+                            />
+                          </div>
+                        </div>
+                        <div className="flex gap-2 pt-4">
+                          <button
+                            onClick={handleSaveSettings}
+                            className="flex-1 bg-emerald-600 text-white py-2 rounded-lg hover:bg-emerald-700 flex items-center justify-center gap-2"
+                          >
+                            <Save className="w-4 h-4" />
+                            Save Settings
+                          </button>
+                          <button
+                            onClick={() => setEditingSettings(null)}
+                            className="flex-1 bg-slate-200 text-slate-700 py-2 rounded-lg hover:bg-slate-300"
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
           </>
