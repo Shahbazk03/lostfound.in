@@ -11,6 +11,7 @@ import {
   Send,
   ArrowLeft,
   User,
+  Lock,
 } from "lucide-react";
 import { formatDateTime } from "@/lib/utils";
 
@@ -24,6 +25,7 @@ interface Message {
   receiverId: number;
   itemId: number;
   itemTitle: string | null;
+  isLocked?: boolean;
 }
 
 export default function MessagesPage() {
@@ -34,6 +36,8 @@ export default function MessagesPage() {
   const [selectedItemId, setSelectedItemId] = useState<number | null>(null);
   const [replyContent, setReplyContent] = useState("");
   const [sending, setSending] = useState(false);
+  const [unlockingMessageId, setUnlockingMessageId] = useState<number | null>(null);
+  const [unlockedMessages, setUnlockedMessages] = useState<Set<number>>(new Set());
 
   useEffect(() => {
     if (!user) return;
@@ -91,6 +95,33 @@ export default function MessagesPage() {
       // ignore
     } finally {
       setSending(false);
+    }
+  };
+
+  const handleUnlockMessage = async (messageId: number) => {
+    if (!user) return;
+    
+    setUnlockingMessageId(messageId);
+    try {
+      const res = await fetch("/api/messages/unlock", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          messageId: messageId,
+        }),
+      });
+      
+      if (res.ok) {
+        const data = await res.json();
+        if (data.sessionUrl) {
+          // Redirect to Stripe checkout
+          window.location.href = data.sessionUrl;
+        }
+      }
+    } catch (error) {
+      console.error("Error unlocking message:", error);
+    } finally {
+      setUnlockingMessageId(null);
     }
   };
 
@@ -211,6 +242,7 @@ export default function MessagesPage() {
                   <div className="flex-1 overflow-y-auto p-5 space-y-4">
                     {[...selectedConversation].reverse().map((msg) => {
                       const isMe = msg.senderId === user.id;
+                      const isUnlocked = !msg.isLocked || unlockedMessages.has(msg.id);
                       return (
                         <div
                           key={msg.id}
@@ -218,22 +250,74 @@ export default function MessagesPage() {
                             isMe ? "justify-end" : "justify-start"
                           }`}
                         >
-                          <div
-                            className={`max-w-[70%] px-4 py-2.5 rounded-2xl text-sm ${
-                              isMe
-                                ? "bg-emerald-600 text-white rounded-br-md"
-                                : "bg-slate-100 text-slate-700 rounded-bl-md"
-                            }`}
-                          >
-                            <div>{msg.content}</div>
+                          {msg.isLocked && !isUnlocked ? (
                             <div
-                              className={`text-xs mt-1 ${
-                                isMe ? "text-emerald-200" : "text-slate-400"
+                              className={`max-w-[70%] px-4 py-3 rounded-2xl text-sm ${
+                                isMe
+                                  ? "bg-emerald-600 rounded-br-md"
+                                  : "bg-slate-100 rounded-bl-md"
                               }`}
                             >
-                              {formatDateTime(msg.createdAt)}
+                              <div
+                                className={`flex items-center gap-2 ${
+                                  isMe ? "text-white" : "text-slate-700"
+                                }`}
+                              >
+                                <Lock className="w-4 h-4" />
+                                <span className="font-medium">Message locked</span>
+                              </div>
+                              <p
+                                className={`text-xs mt-2 ${
+                                  isMe ? "text-emerald-100" : "text-slate-500"
+                                }`}
+                              >
+                                Unlock for $1 to view this message
+                              </p>
+                              {!isMe && (
+                                <button
+                                  onClick={() => handleUnlockMessage(msg.id)}
+                                  disabled={unlockingMessageId === msg.id}
+                                  className="mt-2 bg-yellow-500 hover:bg-yellow-600 disabled:opacity-50 text-black px-3 py-1.5 rounded-md text-xs font-semibold transition-colors flex items-center gap-1 w-full justify-center"
+                                >
+                                  {unlockingMessageId === msg.id ? (
+                                    <>
+                                      <Loader2 className="w-3 h-3 animate-spin" />
+                                      Processing...
+                                    </>
+                                  ) : (
+                                    <>
+                                      <Lock className="w-3 h-3" />
+                                      Unlock for $1
+                                    </>
+                                  )}
+                                </button>
+                              )}
+                              <div
+                                className={`text-xs mt-2 ${
+                                  isMe ? "text-emerald-200" : "text-slate-400"
+                                }`}
+                              >
+                                {formatDateTime(msg.createdAt)}
+                              </div>
                             </div>
-                          </div>
+                          ) : (
+                            <div
+                              className={`max-w-[70%] px-4 py-2.5 rounded-2xl text-sm ${
+                                isMe
+                                  ? "bg-emerald-600 text-white rounded-br-md"
+                                  : "bg-slate-100 text-slate-700 rounded-bl-md"
+                              }`}
+                            >
+                              <div>{msg.content}</div>
+                              <div
+                                className={`text-xs mt-1 ${
+                                  isMe ? "text-emerald-200" : "text-slate-400"
+                                }`}
+                              >
+                                {formatDateTime(msg.createdAt)}
+                              </div>
+                            </div>
+                          )}
                         </div>
                       );
                     })}
