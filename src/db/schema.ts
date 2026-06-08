@@ -87,9 +87,31 @@ export const messages = pgTable("messages", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+export const organizationSettings = pgTable("organization_settings", {
+  id: serial("id").primaryKey(),
+  organizationName: varchar("organization_name", { length: 255 }).notNull(),
+  description: text("description"),
+  contactEmail: varchar("contact_email", { length: 255 }).notNull(),
+  contactPhone: varchar("contact_phone", { length: 50 }),
+  address: text("address"),
+  city: varchar("city", { length: 100 }),
+  country: varchar("country", { length: 100 }),
+  logo: text("logo"),
+  banner: text("banner"),
+  supportEmail: varchar("support_email", { length: 255 }),
+  supportPhone: varchar("support_phone", { length: 50 }),
+  timezone: varchar("timezone", { length: 50 }).default("UTC"),
+  currency: varchar("currency", { length: 10 }).default("USD"),
+  metadata: jsonb("metadata").$type<Record<string, any>>().default({}),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
 export type User = typeof users.$inferSelect;
 export type NewUser = typeof users.$inferInsert;
 export type Item = typeof items.$inferSelect;
 export type NewItem = typeof items.$inferInsert;
 export type Payment = typeof payments.$inferSelect;
 export type Message = typeof messages.$inferSelect;
+export type OrganizationSettings = typeof organizationSettings.$inferSelect;
+export type NewOrganizationSettings = typeof organizationSettings.$inferInsert;
