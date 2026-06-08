@@ -126,37 +126,48 @@ export default function AdminDashboard() {
 
   const fetchData = async () => {
     setLoading(true);
+    setError("");
     try {
-      const [statsRes, usersRes, itemsRes, messagesRes, settingsRes] = await Promise.all([
-        fetch("/api/admin/stats"),
-        fetch("/api/admin/users"),
-        fetch("/api/admin/items"),
-        fetch("/api/admin/messages"),
-        fetch("/api/admin/settings"),
+      // Create abort controllers for each request with 10 second timeout
+      const controllers = Array(5).fill(null).map(() => new AbortController());
+      const timeouts = controllers.map(ctrl => 
+        setTimeout(() => ctrl.abort(), 10000)
+      );
+
+      const responses = await Promise.allSettled([
+        fetch("/api/admin/stats", { signal: controllers[0].signal }),
+        fetch("/api/admin/users", { signal: controllers[1].signal }),
+        fetch("/api/admin/items", { signal: controllers[2].signal }),
+        fetch("/api/admin/messages", { signal: controllers[3].signal }),
+        fetch("/api/admin/settings", { signal: controllers[4].signal }),
       ]);
 
-      if (statsRes.ok) {
-        const statsData = await statsRes.json();
-        setStats(statsData.stats);
+      // Clear timeouts
+      timeouts.forEach(t => clearTimeout(t));
+
+      if (responses[0].status === "fulfilled" && responses[0].value?.ok) {
+        const data = await responses[0].value.json();
+        setStats(data.stats || data);
       }
-      if (usersRes.ok) {
-        const usersData = await usersRes.json();
-        setUsers(usersData.users);
+      if (responses[1].status === "fulfilled" && responses[1].value?.ok) {
+        const data = await responses[1].value.json();
+        setUsers(data.users || data || []);
       }
-      if (itemsRes.ok) {
-        const itemsData = await itemsRes.json();
-        setItems(itemsData.items);
+      if (responses[2].status === "fulfilled" && responses[2].value?.ok) {
+        const data = await responses[2].value.json();
+        setItems(data.items || data || []);
       }
-      if (messagesRes.ok) {
-        const messagesData = await messagesRes.json();
-        setMessages(messagesData.messages);
+      if (responses[3].status === "fulfilled" && responses[3].value?.ok) {
+        const data = await responses[3].value.json();
+        setMessages(data.messages || data || []);
       }
-      if (settingsRes.ok) {
-        const settingsData = await settingsRes.json();
-        setSettings(settingsData.settings);
+      if (responses[4].status === "fulfilled" && responses[4].value?.ok) {
+        const data = await responses[4].value.json();
+        setSettings(data.settings || data);
       }
-    } catch {
-      setError("Failed to load admin data");
+    } catch (err) {
+      console.error("Error fetching admin data:", err);
+      setError("Failed to load some admin data. Please refresh the page.");
     } finally {
       setLoading(false);
     }
